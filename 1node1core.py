@@ -16,6 +16,9 @@ def read_tweets(file,n):
     output = []
     for i in range(0,n):
         tweet = file.readline().strip()
+        if len(tweet)<1 :
+            #skip blank line
+            continue
         if tweet[-1] == ',':
             output.append(tweet[:-1])
         else:
