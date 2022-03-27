@@ -56,7 +56,10 @@ def get_language(tweet,grid):
             point = temp['doc']['coordinates']['coordinates']
             for j in range(0,length):
                 if inside(point,grid[j]) is True:
-                    valid[j].append(temp['doc']['lang'])
+                    language = temp['doc']['lang']
+                    if (language == 'zh-tw') or (language == 'zh-cn'):
+                        language = 'zh'
+                    valid[j].append(language)
                     break
     lang_count = []
     for i in range(0,len(valid)):
@@ -76,6 +79,13 @@ first = twitter.readline().strip()
 first = first[:-1]
 first += '0}'
 total_row = json.loads(first)['total_rows']
+offset = 0
+try:
+    offset = json.loads(first)['offset']
+    total_row -= offset
+except:
+    offset = 0
+    
 total_row -= 1 #first line has been read
 
 main_dict = []
