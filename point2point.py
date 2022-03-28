@@ -16,21 +16,13 @@ import json
 # 读取json文件
 twitter = open('smallTwitter.json','r',errors='ignore')
 first = twitter.readline().strip()
-print(first)
+#print(first)
 first = first[:-1]
 first += '0}'
-print(first)
+#print(first)
 total_row = json.loads(first)['total_rows']
 total_row -= 1
 
-
-# In[3]:
-
-
-total_row
-
-
-# In[11]:
 
 
 # 读取网格规划图
@@ -39,7 +31,7 @@ def read_grids(file_path):
     grids = json.load(f)
     coordinates = []
     for i in grids['features']:
-        print(i['geometry']['coordinates'][0])
+        #print(i['geometry']['coordinates'][0])
         coordinates.append(i['geometry']['coordinates'][0])
     return coordinates
 
@@ -94,7 +86,7 @@ def get_language(tweet,grid):
             continue
         if temp['doc']['coordinates'] != None:
             point = temp['doc']['coordinates']['coordinates']
-            print(point)
+            #print(point)
             for j in range(0,length):
                 if inside(point,grid[j]) is True:
                     valid[j].append(temp['doc']['lang'])
@@ -183,9 +175,9 @@ if rank == 0:
     data_len = len(tweets)
     # master拆分发送data到所有的slave
     print('Process {} sent data:'.format(rank), len(data))
-    for i in range(1, size):
+    for i in range(1, nprocs):
         #按比例拆分
-        each_procs = data_len%size
+        each_procs = data_len%nprocs
         j = 0
         comm.send(data[j:j+each_procs], dest=i, tag=i)
         j = j+each_procs
