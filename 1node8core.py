@@ -100,10 +100,10 @@ main_dict = []
 for i in range(0,len(sydgrid)):
     main_dict.append({})
 
-
+'''
 if rank == 0:
     data = []
-    chunk = math.ceil(total_row/size) #divide into SIZE piece
+    chunk = math.ceil(total_row/size)
     while total_row>0:
         tweets = []
         if total_row>chunk:
@@ -118,17 +118,35 @@ else:
 
 data = comm.scatter(data, root=0)
 lang = get_language(data,sydgrid)
-main_dict = comm.gather(lang,root=0)
+'''
+while total_row>0:
+    comm.Barrier()
+    chunk = 1000
+    data = []
+    if rank == 0:
+        for i in range(size):
+            tweets = []
+            if total_row>chunk:
+                tweets = read_tweets(twitter,chunk)
+                total_row-=chunk
+            else:
+                tweets = read_tweets(twitter,total_row)
+                total_row=0
+            data.append(tweets)
+    else:
+        data = []
+        total_row-=(chunk*size)
+    comm.Barrier()
+    data = comm.scatter(data, root=0)
+    lang = get_language(data,sydgrid)
+    main_dict = update_lang(main_dict,lang)
+    #print(main_dict)
+
+main_dict = comm.gather(main_dict,root=0)
 if rank == 0:
     for i in range(1,size):
         main_dict[0] = update_lang(main_dict[0],main_dict[i])
     print(main_dict[0])
-
-
-
-
-
-
 
 
 
