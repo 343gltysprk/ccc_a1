@@ -9,10 +9,12 @@ def read_grids(file_path):
     f = open(file_path,'r')
     grids = json.load(f)
     coordinates = []
+    grid_id = []
     for i in grids['features']:
         #print(i['geometry']['coordinates'][0])
         coordinates.append(i['geometry']['coordinates'][0])
-    return coordinates
+        grid_id.append(i['properties'])
+    return coordinates,grid_id
 
 #read n tweets
 def read_tweets(file,n):
@@ -64,7 +66,7 @@ def get_language(tweet,grid):
                         language = 'zh'
                     valid[j].append(language)
                     break
-#count valid langauge in the area
+    #count valid langauge in the area
     lang_count = []
     for i in range(0,len(valid)):
         lang_dict = {}
@@ -81,8 +83,13 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
+#language code to name mapping
+code2name = {'en': 'English', 'ar': 'Arabic', 'bn': 'Bengali', 'cs': 'Czech', 'da': 'Danish', 'de': 'German', 'el': 'Greek', 'es': 'Spanish', 'fa': 'Persian', 'fi': 'Finnish', 'fil': 'Filipino', 'fr': 'French', 'he': 'Hebrew', 'hi': 'Hindi', 'hu': 'Hungarian', 'in': 'Indonesian', 'it': 'Italian', 'ja': 'Japanese', 'ko': 'Korean', 'msa': 'Malay', 'nl': 'Dutch', 'no': 'Norwegian', 'pl': 'Polish', 'pt': 'Portuguese', 'ro': 'Romanian', 'ru': 'Russian', 'sv': 'Swedish', 'th': 'Thai', 'tr': 'Turkish', 'uk': 'Ukrainian', 'ur': 'Urdu', 'vi': 'Vietnamese', 'zh-cn': 'Chinese(Simplified)', 'zh-tw': 'Chinese(Traditional)','cy':'Welsh','ht':'Haitian','zh':'Chinese'}
 
-sydgrid = read_grids(sys.argv[1])
+#read grid information and id, not necessary sydney's grids
+sydgrid,grid_id = read_grids(sys.argv[1])
+
+#read first line of twitter,get general information
 twitter = open(sys.argv[2],'r',errors='ignore')
 first = twitter.readline().strip()
 first = first[:-1]
@@ -101,7 +108,7 @@ main_dict = []
 for i in range(0,len(sydgrid)):
     main_dict.append({})
 
-
+#read file with rank0, then scatter the data and compute
 while total_row>0:
     comm.Barrier()
     chunk = 1000
@@ -123,13 +130,32 @@ while total_row>0:
     data = comm.scatter(data, root=0)
     lang = get_language(data,sydgrid)
     main_dict = update_lang(main_dict,lang)
-    #print(main_dict)
 
+#gather result
 main_dict = comm.gather(main_dict,root=0)
 if rank == 0:
     for i in range(1,size):
         main_dict[0] = update_lang(main_dict[0],main_dict[i])
-    print(main_dict[0])
+    print('Cell     #Total Tweets   #Number of Languages Used    #Top 10 Languages & #Tweets')
+    for i in range(len(sydgrid)):
+        total_language = 0
+        total_t = 0
+        t_lan = []
+        for j in main_dict[0][i]:
+            if j == 'und' or j == None:
+                continue
+            total_language+=1
+            total_t+=main_dict[0][i][j]
+            t_lan.append((main_dict[0][i][j],j))
+        t_lan.sort(reverse=True)
+        t_lan = t_lan[:10]
+        code_to_name = []
+        for j in t_lan:
+            temp = code2name.get(j[1])
+            if temp == None:
+                temp = j[1]
+            code_to_name.append((temp,j[0]))
+        print(grid_id[i],'      ',total_t,'                  ',total_language,'                     ',code_to_name)
 
 
 
